@@ -1,5 +1,5 @@
 import * as core from '@actions/core'
-import { readFile, appendFile, existsSync } from 'fs';
+import { readFile, appendFileSync, existsSync, unlink } from 'fs';
 import { resolve } from 'path';
 
 /**
@@ -9,35 +9,48 @@ import { resolve } from 'path';
  */
 export async function run() {
   try {
+    // Only set to true when we actually write
+    core.setOutput("success", false);
+
     // get the base
     const outputPath = resolve("./", core.getInput("outputPath"));
     // redirects.json is hardcoded as the output file from Jekyll
     const redirectPath = resolve(outputPath, "redirects.json");
     if (!existsSync(redirectPath)) {
       core.warning("REDIRECT FILE DOES NOT EXIST! Check the runtime order, this action should run after a Jekyll build");
-      core.setOutput("success", false);
       return;
     }
-    const redirConfig = await readFile(redirectPath);
-    const redirObject = JSON.parse(redirConfig);
-    const numRules = Object.keys(redirObject).length;
-
-    core.info(`Attempting to create ${numRules} rules...`);
-    // create the redirect rules
-    let redirectRules = new Array(numRules);
-    for (let [key, value] of Object.entries(redirObject)) {
-      redirectRules.push(`${key} ${value}`);
-    }
-
+    // This path must be set exactly for Cloudflare
     const outputFile = resolve(outputPath, "_redirects");
-    // Check to see if we have a _redirects file, we will always append to it
-    await appendFile(outputFile, redirectRules.join("\n"));
 
-    // Set outputs for other workflow steps to use
-    core.setOutput("success", true);
-    core.notice("Redirect file successfully written!");
+    await readFile(redirectPath, async (err, data) => {
+      if (err)
+        throw Error(`Failed to read redirects.json file ${err}`);
+
+      // Parse the json file
+      const redirObject = JSON.parse(data);
+
+      // Create the redirect rules
+      core.notice(`Attempting to create ${Object.keys(redirObject).length} rules...`);
+      let redirectRules = new Array();
+      for (let [key, value] of Object.entries(redirObject)) {
+        redirectRules.push(`${key} ${value}`);
+      }
+
+      // Check to see if we have a _redirects file, we will always append to it
+      core.notice("Writing the redirect rules...");
+      const preamble = existsSync(outputFile) ? "\n" : "";
+      appendFileSync(outputFile, preamble + redirectRules.join("\n"));
+
+      // delete the original file, we don't need it anymore.
+      if (core.getBooleanInput("deleteRedirectsJson"))
+        await unlink(redirectPath, (err) => {});
+
+      // Set outputs for other workflow steps to use
+      core.setOutput("success", true);
+      core.notice("Redirect file successfully written!");
+    });
   } catch (error) {
-    core.setOutput("success", false);
     // Fail the workflow run if an error occurs
     if (error instanceof Error) core.setFailed(error.message)
   }

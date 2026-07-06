@@ -8,8 +8,11 @@ branding:
 
 inputs:
   outputPath:
-    description: Your Jekyll build output folder, if you have modified it from the default
+    description: Your Jekyll build output folder, if you have modified the folder name/path from the default
     default: '_site'
+  deleteRedirectsJson:
+    description: Deletes the generated redirects.json file that Jekyll makes after converting it
+    default: true
 
 outputs:
   success:

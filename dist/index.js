@@ -2,7 +2,7 @@ import * as os from 'os';
 import os__default from 'os';
 import * as crypto from 'crypto';
 import * as fs from 'fs';
-import { promises, existsSync, readFile, appendFile as appendFile$1 } from 'fs';
+import { promises, existsSync, readFile, appendFileSync, unlink as unlink$1 } from 'fs';
 import { resolve } from 'path';
 import http from 'http';
 import https from 'https';
@@ -38808,6 +38808,27 @@ function getInput(name, options) {
     return val.trim();
 }
 /**
+ * Gets the input value of the boolean type in the YAML 1.2 "core schema" specification.
+ * Support boolean input list: `true | True | TRUE | false | False | FALSE` .
+ * The return value is also in boolean type.
+ * ref: https://yaml.org/spec/1.2/spec.html#id2804923
+ *
+ * @param     name     name of the input to get
+ * @param     options  optional. See InputOptions.
+ * @returns   boolean
+ */
+function getBooleanInput(name, options) {
+    const trueValue = ['true', 'True', 'TRUE'];
+    const falseValue = ['false', 'False', 'FALSE'];
+    const val = getInput(name);
+    if (trueValue.includes(val))
+        return true;
+    if (falseValue.includes(val))
+        return false;
+    throw new TypeError(`Input does not meet YAML 1.2 "Core Schema" specification: ${name}\n` +
+        `Support boolean input list: \`true | True | TRUE | false | False | FALSE\``);
+}
+/**
  * Sets the value of an output.
  *
  * @param     name     name of the output to set
@@ -38858,13 +38879,6 @@ function warning(message, properties = {}) {
 function notice(message, properties = {}) {
     issueCommand('notice', toCommandProperties(properties), message instanceof Error ? message.toString() : message);
 }
-/**
- * Writes info to log with console.log.
- * @param message info message
- */
-function info(message) {
-    process.stdout.write(message + os.EOL);
-}
 
 /**
  * The main function for the action.
@@ -38873,35 +38887,48 @@ function info(message) {
  */
 async function run() {
   try {
+    // Only set to true when we actually write
+    setOutput("success", false);
+
     // get the base
     const outputPath = resolve("./", getInput("outputPath"));
     // redirects.json is hardcoded as the output file from Jekyll
     const redirectPath = resolve(outputPath, "redirects.json");
     if (!existsSync(redirectPath)) {
       warning("REDIRECT FILE DOES NOT EXIST! Check the runtime order, this action should run after a Jekyll build");
-      setOutput("success", false);
       return;
     }
-    const redirConfig = await readFile(redirectPath);
-    const redirObject = JSON.parse(redirConfig);
-    const numRules = Object.keys(redirObject).length;
-
-    info(`Attempting to create ${numRules} rules...`);
-    // create the redirect rules
-    let redirectRules = new Array(numRules);
-    for (let [key, value] of Object.entries(redirObject)) {
-      redirectRules.push(`${key} ${value}`);
-    }
-
+    // This path must be set exactly for Cloudflare
     const outputFile = resolve(outputPath, "_redirects");
-    // Check to see if we have a _redirects file, we will always append to it
-    await appendFile$1(outputFile, redirectRules.join("\n"));
 
-    // Set outputs for other workflow steps to use
-    setOutput("success", true);
-    notice("Redirect file successfully written!");
+    await readFile(redirectPath, async (err, data) => {
+      if (err)
+        throw Error(`Failed to read redirects.json file ${err}`);
+
+      // Parse the json file
+      const redirObject = JSON.parse(data);
+
+      // Create the redirect rules
+      notice(`Attempting to create ${Object.keys(redirObject).length} rules...`);
+      let redirectRules = new Array();
+      for (let [key, value] of Object.entries(redirObject)) {
+        redirectRules.push(`${key} ${value}`);
+      }
+
+      // Check to see if we have a _redirects file, we will always append to it
+      notice("Writing the redirect rules...");
+      const preamble = existsSync(outputFile) ? "\n" : "";
+      appendFileSync(outputFile, preamble + redirectRules.join("\n"));
+
+      // delete the original file, we don't need it anymore.
+      if (getBooleanInput("deleteRedirectsJson"))
+        await unlink$1(redirectPath, (err) => {});
+
+      // Set outputs for other workflow steps to use
+      setOutput("success", true);
+      notice("Redirect file successfully written!");
+    });
   } catch (error) {
-    setOutput("success", false);
     // Fail the workflow run if an error occurs
     if (error instanceof Error) setFailed(error.message);
   }
