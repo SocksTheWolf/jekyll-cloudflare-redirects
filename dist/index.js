@@ -38856,6 +38856,13 @@ function setFailed(message) {
     error(message);
 }
 /**
+ * Writes debug message to user log
+ * @param message debug message
+ */
+function debug(message) {
+    issueCommand('debug', {}, message);
+}
+/**
  * Adds an error issue
  * @param message error issue message. Errors will be converted to string via toString()
  * @param properties optional properties to add to the annotation.
@@ -38872,12 +38879,11 @@ function warning(message, properties = {}) {
     issueCommand('warning', toCommandProperties(properties), message instanceof Error ? message.toString() : message);
 }
 /**
- * Adds a notice issue
- * @param message notice issue message. Errors will be converted to string via toString()
- * @param properties optional properties to add to the annotation.
+ * Writes info to log with console.log.
+ * @param message info message
  */
-function notice(message, properties = {}) {
-    issueCommand('notice', toCommandProperties(properties), message instanceof Error ? message.toString() : message);
+function info(message) {
+    process.stdout.write(message + os.EOL);
 }
 
 /**
@@ -38909,14 +38915,14 @@ async function run() {
       const redirObject = JSON.parse(data);
 
       // Create the redirect rules
-      notice(`Attempting to create ${Object.keys(redirObject).length} rules...`);
+      info(`Attempting to create ${Object.keys(redirObject).length} rules...`);
       let redirectRules = new Array();
       for (let [key, value] of Object.entries(redirObject)) {
         redirectRules.push(`${key} ${value}`);
       }
 
       // Check to see if we have a _redirects file, we will always append to it
-      notice("Writing the redirect rules...");
+      debug("Writing the redirect rules...");
       const preamble = existsSync(outputFile) ? "\n" : "";
       appendFileSync(outputFile, preamble + redirectRules.join("\n"));
 
@@ -38926,7 +38932,7 @@ async function run() {
 
       // Set outputs for other workflow steps to use
       setOutput("success", true);
-      notice("Redirect file successfully written!");
+      info("Redirect file successfully written!");
     });
   } catch (error) {
     // Fail the workflow run if an error occurs

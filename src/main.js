@@ -31,14 +31,14 @@ export async function run() {
       const redirObject = JSON.parse(data);
 
       // Create the redirect rules
-      core.notice(`Attempting to create ${Object.keys(redirObject).length} rules...`);
+      core.info(`Attempting to create ${Object.keys(redirObject).length} rules...`);
       let redirectRules = new Array();
       for (let [key, value] of Object.entries(redirObject)) {
         redirectRules.push(`${key} ${value}`);
       }
 
       // Check to see if we have a _redirects file, we will always append to it
-      core.notice("Writing the redirect rules...");
+      core.debug("Writing the redirect rules...");
       const preamble = existsSync(outputFile) ? "\n" : "";
       appendFileSync(outputFile, preamble + redirectRules.join("\n"));
 
@@ -48,7 +48,7 @@ export async function run() {
 
       // Set outputs for other workflow steps to use
       core.setOutput("success", true);
-      core.notice("Redirect file successfully written!");
+      core.info("Redirect file successfully written!");
     });
   } catch (error) {
     // Fail the workflow run if an error occurs

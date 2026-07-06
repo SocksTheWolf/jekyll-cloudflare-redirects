@@ -37,7 +37,7 @@ jobs:
       - name: Node Package Install
         run: npm install
       - name: Setup Ruby
-        uses: ruby/setup-ruby@latest
+        uses: ruby/setup-ruby@main
       - name: Build with Jekyll
         # Outputs to the './_site' directory by default
         # (if changed, you must also set the output_path parameter)
@@ -45,7 +45,7 @@ jobs:
         env:
           JEKYLL_ENV: production
       - name: Adapt Redirects
-        uses: socksthewolf/jekyll-cloudflare-redirects-action@latest
+        uses: socksthewolf/jekyll-cloudflare-redirects@main
       - name: Upload to Cloudflare
         env:
           CLOUDFLARE_API_TOKEN: ""
