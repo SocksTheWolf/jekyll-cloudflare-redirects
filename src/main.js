@@ -1,5 +1,6 @@
 import * as core from '@actions/core'
-import { wait } from './wait.js'
+import { readFile, appendFile, existsSync } from 'fs';
+import { resolve } from 'path';
 
 /**
  * The main function for the action.
@@ -8,19 +9,35 @@ import { wait } from './wait.js'
  */
 export async function run() {
   try {
-    const ms = core.getInput('milliseconds')
+    // get the base
+    const outputPath = resolve("./", core.getInput("outputPath"));
+    // redirects.json is hardcoded as the output file from Jekyll
+    const redirectPath = resolve(outputPath, "redirects.json");
+    if (!existsSync(redirectPath)) {
+      core.warning("REDIRECT FILE DOES NOT EXIST! Check the runtime order, this action should run after a Jekyll build");
+      core.setOutput("success", false);
+      return;
+    }
+    const redirConfig = await readFile(redirectPath);
+    const redirObject = JSON.parse(redirConfig);
+    const numRules = Object.keys(redirObject).length;
 
-    // Debug logs are only output if the `ACTIONS_STEP_DEBUG` secret is true
-    core.debug(`Waiting ${ms} milliseconds ...`)
+    core.info(`Attempting to create ${numRules} rules...`);
+    // create the redirect rules
+    let redirectRules = new Array(numRules);
+    for (let [key, value] of Object.entries(redirObject)) {
+      redirectRules.push(`${key} ${value}`);
+    }
 
-    // Log the current timestamp, wait, then log the new timestamp
-    core.debug(new Date().toTimeString())
-    await wait(parseInt(ms, 10))
-    core.debug(new Date().toTimeString())
+    const outputFile = resolve(outputPath, "_redirects");
+    // Check to see if we have a _redirects file, we will always append to it
+    await appendFile(outputFile, redirectRules.join("\n"));
 
     // Set outputs for other workflow steps to use
-    core.setOutput('time', new Date().toTimeString())
+    core.setOutput("success", true);
+    core.notice("Redirect file successfully written!");
   } catch (error) {
+    core.setOutput("success", false);
     // Fail the workflow run if an error occurs
     if (error instanceof Error) core.setFailed(error.message)
   }

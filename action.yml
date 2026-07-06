@@ -1,23 +1,19 @@
-name: The name of your action here
-description: Provide a description here
-author: Your name or organization here
+name: Jekyll Redirects for Cloudflare
+description: Converts a "jekyll-redirect-from" redirect ruleset into one that works on Cloudflare
+author: SocksTheWolf
 
-# Add your action's branding here. This will appear on the GitHub Marketplace.
 branding:
-  icon: heart
-  color: red
+  icon: arrow-right
+  color: green
 
-# Define your inputs here.
 inputs:
-  milliseconds:
-    description: Your input description here
-    required: true
-    default: '1000'
+  outputPath:
+    description: Your Jekyll build output folder, if you have modified it from the default
+    default: '_site'
 
-# Define your outputs here.
 outputs:
-  time:
-    description: Your output description here
+  success:
+    description: Outputs if the _redirects was created/updated successfully
 
 runs:
   using: node24
