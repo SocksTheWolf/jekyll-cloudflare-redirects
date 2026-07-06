@@ -39,7 +39,8 @@ jobs:
       - name: Setup Ruby
         uses: ruby/setup-ruby@latest
       - name: Build with Jekyll
-        # Outputs to the './_site' directory by default (if changed, you must also set the output_path parameter)
+        # Outputs to the './_site' directory by default
+        # (if changed, you must also set the output_path parameter)
         run: bundle exec jekyll build --baseurl ""
         env:
           JEKYLL_ENV: production
