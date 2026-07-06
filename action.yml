@@ -7,10 +7,10 @@ branding:
   color: green
 
 inputs:
-  outputPath:
+  output_path:
     description: Your Jekyll build output folder, if you have modified the folder name/path from the default
     default: '_site'
-  deleteRedirectsJson:
+  delete_redirects_json:
     description: Deletes the generated redirects.json file that Jekyll makes after converting it
     default: true
 

@@ -38891,7 +38891,7 @@ async function run() {
     setOutput("success", false);
 
     // get the base
-    const outputPath = resolve("./", getInput("outputPath"));
+    const outputPath = resolve("./", getInput("output_path"));
     // redirects.json is hardcoded as the output file from Jekyll
     const redirectPath = resolve(outputPath, "redirects.json");
     if (!existsSync(redirectPath)) {
@@ -38921,7 +38921,7 @@ async function run() {
       appendFileSync(outputFile, preamble + redirectRules.join("\n"));
 
       // delete the original file, we don't need it anymore.
-      if (getBooleanInput("deleteRedirectsJson"))
+      if (getBooleanInput("delete_redirects_json"))
         await unlink$1(redirectPath, (err) => {});
 
       // Set outputs for other workflow steps to use
